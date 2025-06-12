@@ -2,6 +2,10 @@ import warnings
 warnings.filterwarnings("ignore")
 from torch import multiprocessing
 
+import imageio
+import numpy as np
+
+
 
 from collections import defaultdict
 
@@ -22,6 +26,20 @@ from torchrl.modules import ProbabilisticActor, TanhNormal, ValueOperator
 from torchrl.objectives import ClipPPOLoss
 from torchrl.objectives.value import GAE
 from tqdm import tqdm
+from tensordict import TensorDict
+
+
+
+
+import torch
+from torchrl.envs.libs.gym import GymEnv
+import matplotlib.pyplot as plt
+import matplotlib
+#matplotlib.use("Agg")
+
+import os
+os.environ["MUJOCO_GL"] = "egl"
+
 
 is_fork = multiprocessing.get_start_method() == "fork"
 device = (
@@ -49,7 +67,7 @@ lmbda = 0.95
 entropy_eps = 1e-4
 
 
-base_env = GymEnv("InvertedDoublePendulum-v4", device=device)
+base_env = GymEnv("InvertedDoublePendulum-v4", device=device, render_mode="rgb_array")
 
 
 env = TransformedEnv(
@@ -226,6 +244,42 @@ for i, tensordict_data in enumerate(collector):
             )
             del eval_rollout
     pbar.set_description(", ".join([eval_str, cum_reward_str, stepcount_str, lr_str]))
+
+    current_step = (i + 1) * frames_per_batch
+    if current_step % 10_000 == 0:
+        print(f"[Render] Visualizing agent policy at step {current_step}")
+        video_path = f"video/ppo_render_step{current_step}.mp4"
+
+        with imageio.get_writer(video_path, fps=30) as video_writer:
+            with set_exploration_type(ExplorationType.DETERMINISTIC), torch.no_grad():
+                for ep in range(3):
+                    td = env.reset()
+            #for real time update
+            #frame = env.base_env.render()
+
+            #fig, ax = plt.subplots()
+            #img = ax.imshow(frame)
+            #plt.axis("off")
+                    for _ in range(250):
+                ##action_td = policy_module(td)
+                        td.update(policy_module(td))
+                ##td = env.step(TensorDict({"action": action_td["action"]}, batch_size=[]))
+                        td = env.step(td)
+
+                        frame = env.base_env.render()
+                        video_writer.append_data(np.asarray(frame))
+
+        print(f"[Render] Saved {video_path}")
+
+                #for real time update
+                #frame = env.base_env.render()
+                #frame = env.base_env.render()
+                #img.set_data(frame)     # update image data instead of recreating plot
+                #plt.draw()
+                #plt.pause(0.001)        # keep short pause for rendering
+
+
+                
 
     # We're also using a learning rate scheduler. Like the gradient clipping,
     # this is a nice-to-have but nothing necessary for PPO to work.
