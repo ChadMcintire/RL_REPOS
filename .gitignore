@@ -1,0 +1,9 @@
+# Ignore contents of any directory named 'video'
+video/*
+*/video/*
+**/video/*
+
+# But allow .gitkeep files inside them
+!video/.gitkeep
+!*/video/.gitkeep
+!**/video/.gitkeep

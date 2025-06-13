@@ -1,0 +1,4 @@
+render:
+  fps:30
+  eps_range:3
+  eps_length:250

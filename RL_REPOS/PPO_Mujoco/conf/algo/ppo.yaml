@@ -1,0 +1,7 @@
+ppo:
+  clip_epsilon: 0.2
+  entropy_eps: 1e-4
+  critic_coef: 1.0
+  loss_critic_type: "smooth_l1"
+  split_trajs: false
+  average_gae: true

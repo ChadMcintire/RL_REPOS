@@ -1,0 +1,9 @@
+model:
+  type: MLP
+  num_cells: 256
+  hidden_activation: tanh
+  actor:
+    in_keys: ["observation"]
+    out_keys: ["loc", "scale"]
+  critic:
+    in_keys: ["observation"]
