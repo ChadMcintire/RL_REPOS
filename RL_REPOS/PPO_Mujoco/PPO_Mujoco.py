@@ -41,6 +41,8 @@ from omegaconf import DictConfig
 import os
 os.environ["MUJOCO_GL"] = "egl"
 
+from record import record_current_model
+
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg: DictConfig):
     num_cells=num_cells = cfg.model.num_cells
@@ -263,39 +265,8 @@ def main(cfg: DictConfig):
         pbar.set_description(", ".join([eval_str, cum_reward_str, stepcount_str, lr_str]))
     
         current_step = (i + 1) * frames_per_batch
-        if current_step % 10_000 == 0:
-            print(f"[Render] Visualizing agent policy at step {current_step}")
-            video_path = f"video/ppo_render_step{current_step}.mp4"
-    
-            with imageio.get_writer(video_path, fps=cfg.render.fps) as video_writer:
-                with set_exploration_type(ExplorationType.DETERMINISTIC), torch.no_grad():
-                    for ep in range(cnf.render.eps_range):
-                        td = env.reset()
-                #for real time update
-                #frame = env.base_env.render()
-    
-                #fig, ax = plt.subplots()
-                #img = ax.imshow(frame)
-                #plt.axis("off")
-                        for _ in range(eps_length):
-                    ##action_td = policy_module(td)
-                            td.update(policy_module(td))
-                    ##td = env.step(TensorDict({"action": action_td["action"]}, batch_size=[]))
-                            td = env.step(td)
-    
-                            frame = env.base_env.render()
-                            video_writer.append_data(np.asarray(frame))
-    
-            print(f"[Render] Saved {video_path}")
-    
-                    #for real time update
-                    #frame = env.base_env.render()
-                    #frame = env.base_env.render()
-                    #img.set_data(frame)     # update image data instead of recreating plot
-                    #plt.draw()
-                    #plt.pause(0.001)        # keep short pause for rendering
-    
-    
+        if current_step % cfg.render.step_number == 0:
+            record_current_model(env, cfg, current_step,policy_module)
                     
     
         # We're also using a learning rate scheduler. Like the gradient clipping,
