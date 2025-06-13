@@ -42,6 +42,7 @@ import os
 os.environ["MUJOCO_GL"] = "egl"
 
 from record import record_current_model
+from models import build_policy_module, build_value_module
 
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg: DictConfig):
@@ -98,7 +99,6 @@ def main(cfg: DictConfig):
     
     
     print("normalization constant shape:", env.transform[0].loc.shape)
-    
     print("observation_spec:", env.observation_spec)
     print("reward_spec:", env.reward_spec)
     print("input_spec:", env.input_spec)
@@ -110,54 +110,8 @@ def main(cfg: DictConfig):
     print("rollout of three steps:", rollout)
     print("Shape of the rollout TensorDict:", rollout.batch_size)
 
-    
-    actor_net = nn.Sequential(
-        nn.LazyLinear(num_cells, device=device),
-        activation_fn,
-        nn.LazyLinear(num_cells, device=device),
-        activation_fn,
-        nn.LazyLinear(num_cells, device=device),
-        activation_fn,
-        nn.LazyLinear(2 * env.action_spec.shape[-1], device=device),
-        NormalParamExtractor(),
-    )
-    
-    
-    policy_module = TensorDictModule(
-        actor_net, 
-        in_keys=[str(k) for k in cfg.model.actor.in_keys], 
-        out_keys=[str(k) for k in cfg.model.actor.out_keys]
-    )
-    
-    policy_module = ProbabilisticActor(
-        module=policy_module,
-        spec=env.action_spec,
-        in_keys=[str(k) for k in cfg.model.actor.out_keys], #in keys need to match the actor_net out keys
-        distribution_class=TanhNormal,
-        distribution_kwargs={
-            "low": env.action_spec.space.low,
-            "high": env.action_spec.space.high,
-        },
-        return_log_prob=True,
-        # we'll need the log-prob for the numerator of the importance weights
-    )
-    
-    
-    value_net = nn.Sequential(
-        nn.LazyLinear(num_cells, device=device),
-        activation_fn,
-        nn.LazyLinear(num_cells, device=device),
-        activation_fn,
-        nn.LazyLinear(num_cells, device=device),
-        activation_fn,
-        nn.LazyLinear(1, device=device),
-    )
-    
-    value_module = ValueOperator(
-        module=value_net,
-        in_keys=[str(k) for k in cfg.model.critic.in_keys],
-    )
-    
+    policy_module = build_policy_module(cfg, env, device)
+    value_module = build_value_module(cfg, env, device)
     
     print("Running policy:", policy_module(env.reset()))
     print("Running value:", value_module(env.reset()))

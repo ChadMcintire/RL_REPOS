@@ -5,5 +5,7 @@ model:
   actor:
     in_keys: ["observation"]
     out_keys: ["loc", "scale"]
+    n_layers: 3
   critic:
     in_keys: ["observation"]
+    n_layers: 3
