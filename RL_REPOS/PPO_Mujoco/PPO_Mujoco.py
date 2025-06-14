@@ -42,7 +42,7 @@ import os
 os.environ["MUJOCO_GL"] = "egl"
 
 from utils.record import record_current_model
-from models import build_policy_module, build_value_module
+from models.mlp import build_policy_module, build_value_module
 from components.ppo_components import build_ppo_algorithm
 
 @hydra.main(config_path="conf", config_name="config")
