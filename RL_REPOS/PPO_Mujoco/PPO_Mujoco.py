@@ -41,8 +41,9 @@ from omegaconf import DictConfig
 import os
 os.environ["MUJOCO_GL"] = "egl"
 
-from record import record_current_model
+from utils.record import record_current_model
 from models import build_policy_module, build_value_module
+from components.ppo_components import build_ppo_algorithm
 
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg: DictConfig):
@@ -67,9 +68,6 @@ def main(cfg: DictConfig):
     activation_fn = {"tanh": nn.Tanh(), "relu": nn.ReLU()}[cfg.model.hidden_activation]
 
 
-
-
-
     is_fork = multiprocessing.get_start_method() == "fork"
     device = (
         torch.device(0)
@@ -77,13 +75,8 @@ def main(cfg: DictConfig):
         else torch.device("cpu")
     )
     
-    
-    
-    
-    
+
     base_env = GymEnv(cfg.env.gym_env, device=device, render_mode=cfg.env.render_mode)
-    
-    
     env = TransformedEnv(
         base_env,
         Compose(
@@ -116,43 +109,7 @@ def main(cfg: DictConfig):
     print("Running policy:", policy_module(env.reset()))
     print("Running value:", value_module(env.reset()))
     
-    collector = SyncDataCollector(
-        env,
-        policy_module,
-        frames_per_batch=frames_per_batch,
-        total_frames=total_frames,
-        split_trajs=cfg.algo.ppo.split_trajs,
-        device=device,
-    )
-    
-    
-    replay_buffer = ReplayBuffer(
-        storage=LazyTensorStorage(max_size=frames_per_batch),
-        sampler=SamplerWithoutReplacement(),
-    )
-    
-    advantage_module = GAE(
-        gamma=gamma, lmbda=lmbda, 
-        value_network=value_module, 
-        average_gae=cfg.algo.ppo.average_gae, 
-        device=device,
-    )
-    
-    loss_module = ClipPPOLoss(
-        actor_network=policy_module,
-        critic_network=value_module,
-        clip_epsilon=clip_epsilon,
-        entropy_bonus=bool(entropy_eps),
-        entropy_coef=entropy_eps,
-        # these keys match by default but we set this for completeness
-        critic_coef=cfg.algo.ppo.critic_coef,
-        loss_critic_type=cfg.algo.ppo.loss_critic_type,
-    )
-    
-    optim = torch.optim.Adam(loss_module.parameters(), lr)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optim, total_frames // frames_per_batch, 0.0
-    )
+    ppo = build_ppo_algorithm(cfg, env, policy_module, value_module)
     
     logs = defaultdict(list)
     pbar = tqdm(total=total_frames)
@@ -160,18 +117,18 @@ def main(cfg: DictConfig):
     
     # We iterate over the collector until it reaches the total number of frames it was
     # designed to collect:
-    for i, tensordict_data in enumerate(collector):
+    for i, tensordict_data in enumerate(ppo.collector):
         # we now have a batch of data to work with. Let's learn something from it.
         for _ in range(num_epochs):
             # We'll need an "advantage" signal to make PPO work.
             # We re-compute it at each epoch as its value depends on the value
             # network which is updated in the inner loop.
-            advantage_module(tensordict_data)
+            ppo.advantage_module(tensordict_data)
             data_view = tensordict_data.reshape(-1)
-            replay_buffer.extend(data_view.cpu())
+            ppo.replay_buffer.extend(data_view.cpu())
             for _ in range(frames_per_batch // sub_batch_size):
-                subdata = replay_buffer.sample(sub_batch_size)
-                loss_vals = loss_module(subdata.to(device))
+                subdata = ppo.replay_buffer.sample(sub_batch_size)
+                loss_vals = ppo.loss_module(subdata.to(device))
                 loss_value = (
                     loss_vals["loss_objective"]
                     + loss_vals["loss_critic"]
@@ -182,9 +139,9 @@ def main(cfg: DictConfig):
                 loss_value.backward()
                 # this is not strictly mandatory but it's good practice to keep
                 # your gradient norm bounded
-                torch.nn.utils.clip_grad_norm_(loss_module.parameters(), max_grad_norm)
-                optim.step()
-                optim.zero_grad()
+                torch.nn.utils.clip_grad_norm_(ppo.loss_module.parameters(), max_grad_norm)
+                ppo.optim.step()
+                ppo.optim.zero_grad()
     
         logs["reward"].append(tensordict_data["next", "reward"].mean().item())
         pbar.update(tensordict_data.numel())
@@ -193,7 +150,7 @@ def main(cfg: DictConfig):
         )
         logs["step_count"].append(tensordict_data["step_count"].max().item())
         stepcount_str = f"step count (max): {logs['step_count'][-1]}"
-        logs["lr"].append(optim.param_groups[0]["lr"])
+        logs["lr"].append(ppo.optim.param_groups[0]["lr"])
         lr_str = f"lr policy: {logs['lr'][-1]: 4.4f}"
         if i % 10 == 0:
             # We evaluate the policy once every 10 batches of data.
@@ -225,7 +182,7 @@ def main(cfg: DictConfig):
     
         # We're also using a learning rate scheduler. Like the gradient clipping,
         # this is a nice-to-have but nothing necessary for PPO to work.
-        scheduler.step()
+        ppo.scheduler.step()
     
     plt.figure(figsize=(10, 10))
     plt.subplot(2, 2, 1)

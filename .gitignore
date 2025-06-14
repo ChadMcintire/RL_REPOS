@@ -7,3 +7,5 @@ video/*
 !video/.gitkeep
 !*/video/.gitkeep
 !**/video/.gitkeep
+
+__pycache__/
