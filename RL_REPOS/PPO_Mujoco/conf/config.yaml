@@ -11,5 +11,9 @@ hydra:
     dir: ../outputs/logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
 paths:
-  video_dir: ../outputs/video
-  log_dir: ../outputs/logs
+  video_dir: ../video
+  log_dir: ../mlruns
+
+experiment:
+  name: ppo_mujoco_experiment
+  run_name: run_baseline

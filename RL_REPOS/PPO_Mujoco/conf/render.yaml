@@ -2,4 +2,4 @@ render:
   fps: 30
   eps_range: 3
   eps_length: 250
-  step_number: 5000
+  step_number: 50000
