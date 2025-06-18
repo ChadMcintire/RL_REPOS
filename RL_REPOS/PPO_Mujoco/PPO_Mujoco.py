@@ -5,7 +5,6 @@ from torch import multiprocessing
 import numpy as np
 from collections import defaultdict
 
-import matplotlib.pyplot as plt
 import torch
 from torchrl.envs.utils import check_env_specs, ExplorationType, set_exploration_type
 from tqdm import tqdm
@@ -19,14 +18,18 @@ import os
 os.environ["MUJOCO_GL"] = "egl"
 
 from utils.record import record_current_model
+from utils.plotting import plot_training_logs
 from utils.create_env import make_env
 from models.mlp import build_policy_module, build_value_module
 from components.ppo_components import build_ppo_algorithm
 from eval.evaluator import evaluate_policy
 from trainer.train_ppo import run_training_loop
 
+
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg: DictConfig):
+    from hydra.core.hydra_config import HydraConfig
+    print("Working dir:", HydraConfig.get().run.dir)
 
     # --- Training config ---
     total_frames = cfg.training.total_frames
@@ -88,20 +91,7 @@ def main(cfg: DictConfig):
         # this is a nice-to-have but nothing necessary for PPO to work.
         ppo.scheduler.step()
     
-    plt.figure(figsize=(10, 10))
-    plt.subplot(2, 2, 1)
-    plt.plot(logs["reward"])
-    plt.title("training rewards (average)")
-    plt.subplot(2, 2, 2)
-    plt.plot(logs["step_count"])
-    plt.title("Max step count (training)")
-    plt.subplot(2, 2, 3)
-    plt.plot(logs["eval reward (sum)"])
-    plt.title("Return (test)")
-    plt.subplot(2, 2, 4)
-    plt.plot(logs["eval step_count"])
-    plt.title("Max step count (test)")
-    plt.show()
+    plot_training_logs(logs)
 
 if __name__ == "__main__":
     main()

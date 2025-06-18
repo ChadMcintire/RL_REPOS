@@ -5,3 +5,8 @@ defaults:
   - env
   - algo/ppo
   - eval
+
+# path for logs
+hydra:
+  run:
+    dir: logs
