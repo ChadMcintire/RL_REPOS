@@ -26,7 +26,7 @@ from eval.evaluator import evaluate_policy
 from trainer.train_ppo import run_training_loop
 
 
-@hydra.main(config_path="conf", config_name="config")
+@hydra.main(config_path="../conf", config_name="config")
 def main(cfg: DictConfig):
     from hydra.core.hydra_config import HydraConfig
     print("Working dir:", HydraConfig.get().run.dir)
