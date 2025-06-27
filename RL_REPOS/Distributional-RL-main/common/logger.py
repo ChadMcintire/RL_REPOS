@@ -41,14 +41,15 @@ class Logger:
             self.wandb_active = True
 
         if not self.config.get("do_test", False) and self.config.get("save_weights", True):
-            self.create_weights_folder(self.log_dir)
+            self.create_weights_folder()
 
 
-    @staticmethod
-    def create_weights_folder(dir_name):
-        weights_dir = Path("weights")
-        weights_dir.mkdir(exist_ok=True)
-        (weights_dir / dir_name).mkdir(exist_ok=True)
+    def create_weights_folder(self):
+        #weights_dir = Path("weights")
+        #weights_dir.mkdir(exist_ok=True)
+        #(weights_dir / dir_name).mkdir(exist_ok=True)
+        weights_path = Path("runs") / self.log_dir / "weights"
+        weights_path.mkdir(parents=True, exist_ok=True)  # Create the full directory path if it doesn't exist
 
     def on(self):
         self.start_time = time.time()
@@ -97,7 +98,7 @@ class Logger:
                 f"E_Running_Reward: {self.running_reward:.2f} | "
                 f"Mem_Len: {len(self.agent.memory)} | "
                 f"Mean_steps_time: {self.duration / e_len:.2f} | "
-                f"{self.to_gb(memory.used):.1f}/{self.to_gb(memory.total):.1f} GB RAM | "
+                f"RAM Usage: {self.to_gb(memory.used):.1f} / {self.to_gb(memory.total):.1f} GB"
                 f"eps: {self.agent.exp_eps:.2f} | "
                 f"Time: {datetime.datetime.now().strftime('%H:%M:%S')} | "
                 f"Step: {step}"
@@ -118,10 +119,6 @@ class Logger:
             if k not in metrics:
                 metrics[k] = v
 
-        if self.thread.is_alive():
-            self.thread.join(timeout=1)
-        self.thread = Thread(target=self.log_metrics, args=(metrics,))
-        self.thread.start()
 
         if self.wandb_active:
             if self.thread.is_alive():
@@ -137,13 +134,24 @@ class Logger:
         except Exception as e:
             print(f"[wandb] Log failed: {e}")
 
-    def save_weights(self):
-        torch.save({"online_model_state_dict": self.agent.online_model.state_dict()},
-                   "weights/" + self.log_dir + "/params.pth")
 
+    def save_weights(self):
+        # Define the path: runs/<log_dir>/weights/params.pth
+        weights_path = Path("runs") / self.log_dir / "weights"
+        weights_path.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+        path = weights_path / "params.pth"
+        torch.save({"online_model_state_dict": self.agent.online_model.state_dict()}, path)
 
     def load_weights(self):
-        model_dir = sorted(glob.glob("weights/*"))[-1]
-        checkpoint = torch.load(os.path.join(model_dir, "params.pth"))
-        self.log_dir = os.path.basename(model_dir)
+        # Search for all runs/<log_dir>/weights directories
+        model_dirs = sorted(glob.glob("runs/*/weights"))
+        if not model_dirs:
+            raise FileNotFoundError("No saved weights found in 'runs/*/weights'.")
+
+        latest_weights_dir = model_dirs[-1]
+        checkpoint_path = Path(latest_weights_dir) / "params.pth"
+        checkpoint = torch.load(checkpoint_path)
+
+        # Set log_dir to the parent of weights (i.e., the run directory name)
+        self.log_dir = Path(latest_weights_dir).parent.name
         return checkpoint
