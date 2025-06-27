@@ -55,12 +55,14 @@ if __name__ == "__main__":
                 "min_exp_eps"]
 
             logger.off()
-            logger.log(episode,
-                       episode_reward,
-                       episode_loss / step * configs["train_interval"],
-                       total_steps,
-                       step
-                       )
+            logger.log(
+            episode=episode,
+            episode_reward=episode_reward,
+            loss=episode_loss / step * configs["train_interval"],
+            step=total_steps,
+            e_len=step
+            )
+
     else:
         checkpoint = logger.load_weights()
         agent.online_model.load_state_dict(checkpoint["online_model_state_dict"])
