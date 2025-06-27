@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 import numpy as np
 from .atari_wrappers import make_atari
 import time

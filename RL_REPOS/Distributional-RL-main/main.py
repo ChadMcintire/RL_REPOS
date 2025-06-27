@@ -34,11 +34,12 @@ if __name__ == "__main__":
             logger.on()
             episode_reward = 0
             episode_loss = 0
-            state = env.reset()
+            state, _ = env.reset()
             for step in range(1, 1 + env.spec.max_episode_steps):
                 total_steps += 4  # 4: MaxAndSkip env!
                 action = agent.choose_action(state)
-                next_state, reward, done, _ = env.step(action)
+                next_state, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated  
                 agent.store(state, reward, done, action, next_state)
                 episode_reward += reward
                 if total_steps % configs["train_interval"] == 0:

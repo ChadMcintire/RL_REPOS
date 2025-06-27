@@ -1,7 +1,9 @@
 from abc import ABC
 import cv2
-import gym
+import gymnasium as gym
+import ale_py
 import numpy as np
+from gymnasium.wrappers import TimeLimit
 
 
 def make_atari(env_name: str,
@@ -9,6 +11,7 @@ def make_atari(env_name: str,
                clip_reward: bool = True,
                seed: int = 123
                ):
+    gym.register_envs(ale_py)
     env = gym.make(env_name)
     if "NoFrameskip" not in env.spec.id:  # noqa
         raise ValueError(f"env should be from `NoFrameskip` type got: {env_name}")  # noqa
@@ -22,10 +25,11 @@ def make_atari(env_name: str,
     if clip_reward:
         env = ClipRewardEnv(env)
     env = StackFrameEnv(env)
+    env = TimeLimit(env, max_episode_steps=100000)  # explicitly set step limit
 
-    env.seed(seed)
-    env.observation_space.np_random.seed(seed)
-    env.action_space.np_random.seed(seed)
+    env.reset(seed=seed)
+
+    np.random.seed(seed)
     return env
 
 
@@ -36,16 +40,14 @@ class NoopResetEnv(gym.Wrapper):
         self.noop_action = 0
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
 
-    def reset(self):
-        self.env.reset()
-
+    def reset(self, *, seed=None, options=None):
+        obs, info = self.env.reset(seed=seed, options=options)
         noops = np.random.randint(1, self.noop_max + 1)  # noqa
-        obs = None
         for _ in range(noops):
-            obs, _, done, _ = self.env.step(self.noop_action)
-            if done:
-                obs = self.env.reset()
-        return obs
+            obs, _, terminated, truncated, info = self.env.step(self.noop_action)
+            if terminated or truncated:
+                obs, info = self.env.reset(seed=seed, options=options)
+        return obs, info
 
 
 class MaxAndSkipEnv(gym.Wrapper):
@@ -56,79 +58,73 @@ class MaxAndSkipEnv(gym.Wrapper):
         self.skip = skip
 
     def step(self, action):
-        reward = 0
-        done = None
-        info = None
+        total_reward = 0
+        terminated = truncated = False
+        info = {}
         for i in range(self.skip):
-            obs, r, done, info = self.env.step(action)
+            obs, reward, term, trunc, info = self.env.step(action)
 
             if i == self.skip - 2:
                 self.obs_buffer[0] = obs
             if i == self.skip - 1:
                 self.obs_buffer[1] = obs
-            reward += r
-            if done:
+            total_reward += reward
+            if term or trunc:
+                terminated, truncated = term, trunc
                 break
-
         max_frame = self.obs_buffer.max(axis=0)  # noqa
-
-        return max_frame, reward, done, info
+        return max_frame, total_reward, terminated, truncated, info
 
 
 class EpisodicLifeEnv(gym.Wrapper):
     def __init__(self, env):
-        super(EpisodicLifeEnv, self).__init__(env)
+        super().__init__(env)
         self.lives = 0
-        self.real_done = True
+        self.was_real_done = True
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
-        self.real_done = done
-
-        lives = info["ale.lives"]
-        if self.lives > lives > 0:
-            done = True
-
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        self.was_real_done = terminated or truncated
+        lives = self.env.unwrapped.ale.lives()
+        if 0 < lives < self.lives:
+            terminated = True
         self.lives = lives
-        return obs, reward, done, info
+        return obs, reward, terminated, truncated, info
 
-    def reset(self):
-
-        if self.real_done:
-            obs = self.env.reset()
+    def reset(self, *, seed=None, options=None):
+        if self.was_real_done:
+            obs, info = self.env.reset(seed=seed, options=options)
         else:
-            obs, *_ = self.env.step(0)
+            obs, _, _, _, info = self.env.step(0)
         self.lives = self.env.unwrapped.ale.lives()
-        return obs
+        return obs, info
 
 
 class FireResetEnv(gym.Wrapper):
     def __init__(self, env):
-        super(FireResetEnv, self).__init__(env)
+        super().__init__(env)
         assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
         assert len(env.unwrapped.get_action_meanings()) >= 3
 
-    def reset(self):
-        self.env.reset()
-        obs, _, done, _ = self.env.step(1)
-        if done:
-            self.env.reset()
-        obs, _, done, _ = self.env.step(2)
-        if done:
-            self.env.reset()
-        return obs
+    def reset(self, *, seed=None, options=None):
+        obs, info = self.env.reset(seed=seed, options=options)
+        obs, _, terminated, truncated, _ = self.env.step(1)
+        if terminated or truncated:
+            obs, info = self.env.reset(seed=seed, options=options)
+        obs, _, terminated, truncated, _ = self.env.step(2)
+        if terminated or truncated:
+            obs, info = self.env.reset(seed=seed, options=options)
+        return obs, info
 
 
 class ResizedAndGrayscaleEnv(gym.ObservationWrapper, ABC):
-    def __init__(self, env, width: int = 84, height: int = 84):
-        gym.ObservationWrapper.__init__(self, env)
+    def __init__(self, env, width=84, height=84):
+        super().__init__(env)
         self.width = width
         self.height = height
-        self.channels = 1
-        self.observation_space = gym.spaces.Box(low=0, high=255,
-                                                shape=(self.height, self.width, self.channels),
-                                                dtype=np.uint8
-                                                )
+        self.observation_space = gym.spaces.Box(
+            low=0, high=255, shape=(self.height, self.width), dtype=np.uint8
+        )
 
     def observation(self, observation):
         frame = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
@@ -136,28 +132,31 @@ class ResizedAndGrayscaleEnv(gym.ObservationWrapper, ABC):
         return frame
 
 
+# np.sign(x) =
+#   -1 if x < 0
+#    0 if x == 0
+#   +1 if x > 0
 class ClipRewardEnv(gym.RewardWrapper, ABC):
-    def __init__(self, env):
-        gym.RewardWrapper.__init__(self, env)
-
     def reward(self, reward):
-        return bool(reward > 0) - bool(reward < 0)
+        return np.sign(reward)
 
 
 class StackFrameEnv(gym.Wrapper):
-    def __init__(self, env, stack_size: int = 4):
-        gym.Wrapper.__init__(self, env)
+    def __init__(self, env, stack_size=4):
+        super().__init__(env)
         self.stack_size = stack_size
-        w, h, c = env.observation_space.shape
-        self.frames = np.zeros((w, h, c), dtype=np.uint8)
+        w, h = env.observation_space.shape
+        self.frames = np.zeros((stack_size, w, h), dtype=np.uint8)
 
-    def reset(self, **kwargs):
-        obs = self.env.reset()
-        self.frames = np.stack([obs for _ in range(self.stack_size)], axis=0)  # PyTorch's channel axis is 0!
-        return self.frames
+    def reset(self, *, seed=None, options=None):
+        obs, info = self.env.reset(seed=seed, options=options)
+        obs = obs.astype(np.uint8)
+        self.frames = np.stack([obs] * self.stack_size, axis=0)# PyTorch's channel axis is 0!
+        return self.frames, info
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
-        old_frames = self.frames[1:, ...]
-        self.frames = np.concatenate([old_frames, np.expand_dims(obs, axis=0)], axis=0)
-        return self.frames, reward, done, info
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        obs = obs.astype(np.uint8)
+        self.frames[:-1] = self.frames[1:]
+        self.frames[-1] = obs
+        return self.frames, reward, terminated, truncated, info
