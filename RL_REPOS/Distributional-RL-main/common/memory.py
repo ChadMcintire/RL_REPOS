@@ -1,24 +1,38 @@
-import random
-from collections import namedtuple
+from torchrl.data import ReplayBuffer
+from torchrl.data.replay_buffers.storages import LazyTensorStorage
+from torchrl.data.replay_buffers.samplers import SamplerWithoutReplacement
+from tensordict import TensorDict
+import torch
 
-Transition = namedtuple('Transition',
-                        ('state', 'reward', 'done', 'action', 'next_state')
-                        )
+class TorchReplayBuffer:
+    def __init__(self, buffer_size, device="cpu"):
+        self.buffer_size = buffer_size
+        self.device = device
 
+        self.buffer = ReplayBuffer(
+            storage=LazyTensorStorage(max_size=buffer_size, device=device),
+            sampler=SamplerWithoutReplacement(),
+        )
 
-class Memory:
-    def __init__(self, memory_size):
-        self.memory_size = memory_size
-        self.memory = []
+    def add(self, state, reward, done, action, next_state):
+        state = torch.tensor(state, device=self.device).unsqueeze(0)
+        next_state = torch.tensor(next_state, device=self.device).unsqueeze(0)
+        action = torch.tensor(action, device=self.device).unsqueeze(0)
+        reward = torch.tensor([reward], dtype=torch.float32, device=self.device)
+        done = torch.tensor([done], dtype=torch.bool, device=self.device)
 
-    def add(self, *transition):
-        self.memory.append(Transition(*transition))
-        if len(self.memory) > self.memory_size:
-            self.memory.pop(0)
-        assert len(self.memory) <= self.memory_size
+        td = TensorDict({
+            "state": state,
+            "reward": reward,
+            "done": done,
+            "action": action,
+            "next_state": next_state,
+        }, batch_size=[1])
+        self.buffer.extend(td)
 
-    def sample(self, size):
-        return random.sample(self.memory, size)
+    def sample(self, batch_size):
+        # Returns a sampled TensorDict
+        return self.buffer.sample(batch_size).to(self.device)
 
     def __len__(self):
-        return len(self.memory)
+        return len(self.buffer)

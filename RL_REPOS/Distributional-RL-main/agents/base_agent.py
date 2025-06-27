@@ -1,4 +1,4 @@
-from common import Memory, Transition
+from common.memory import TorchReplayBuffer
 import torch
 import random
 import numpy as np
@@ -10,7 +10,7 @@ class BaseAgent:
         self.configs = configs
         self.batch_size = configs["batch_size"]
         self.exp_eps = 1
-        self.memory = Memory(configs["mem_size"])
+        self.memory = TorchReplayBuffer(configs["mem_size"])
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.online_model = None
         self.target_model = None
@@ -41,13 +41,15 @@ class BaseAgent:
         self.memory.add(state, reward, done, action, next_state)
 
     def unpack_batch(self, batch):
-        batch = Transition(*zip(*batch))
+        # batch is a TensorDict returned from self.buffer.sample(batch_size)
+        device = self.device
 
-        states = from_numpy(np.stack(batch.state)).to(self.device)
-        actions = from_numpy(np.stack(batch.action)).to(self.device)
-        rewards = from_numpy(np.stack(batch.reward)).view(-1, 1).to(self.device)
-        next_states = from_numpy(np.stack(batch.next_state)).to(self.device)
-        dones = from_numpy(np.stack(batch.done)).view(-1, 1).to(self.device) # noqa
+        states = batch["state"].to(device)
+        actions = batch["action"].to(device)
+        rewards = batch["reward"].unsqueeze(-1).to(device)  # shape: [batch, 1]
+        next_states = batch["next_state"].to(device)
+        dones = batch["done"].unsqueeze(-1).to(device)  # convert bool to float if needed
+
         return states, actions, rewards, next_states, dones
 
     def hard_target_update(self):
