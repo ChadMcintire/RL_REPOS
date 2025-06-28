@@ -1,0 +1,50 @@
+#make mount
+sudo mkdir -p /mnt/sde
+
+#replace /dev/nvme2n1p1 with mount name
+sudo mount /dev/nvme2n1p1 /mnt/sde
+
+#check that the mount is correct 
+df -h | grep /mnt/sde
+
+# make the directory read, writeable, and executable 
+sudo chown -R ubuntu:ubuntu /mnt/sde/
+chmod -R u+rwX /mnt/sde/
+
+#to make it permanent, get the uuid by running this
+sudo blkid /dev/nvme1n1p1
+
+#add the uuid to the fstab by running this 
+sudo vi /etc/fstab
+
+#the file should look like this 
+UUID=3b3d1198-9a75-414a-bb73-e7c6323abb17 /mnt/sde ext4 defaults,nofail 0 2
+
+
+#install conda to the current directory
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ./miniconda.sh
+bash ./miniconda.sh -b -u -p ./miniconda3
+rm ./miniconda.sh
+./miniconda3/bin/conda init
+exec "$SHELL"
+
+#update system
+sudo apt-get update
+sudo apt-get upgrade
+
+#setup X-11 forwarding
+
+#for the cloud instance
+sudo apt install xauth x11-apps -y
+
+#might need to put this on the host system as well
+sudo apt install xauth x11-apps -y
+
+# if a clock comes up on your screen it's working
+xclock
+
+
+
+
+# might need to do this if you come up with problems
+sudo apt install libgl1-mesa-glx libgl1-mesa-dri libglu1-mesa

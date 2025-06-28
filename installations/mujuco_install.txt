@@ -1,0 +1,14 @@
+sudo apt install libegl1 libosmesa6 libgl1-mesa-dev
+
+
+export MUJOCO_GL=egl
+
+pip install imageio[ffmpeg]
+
+sudo apt update
+sudo apt install ffmpeg
+
+#to run 
+ffplay ppo_render_step10000.mp4
+
+LIBGL_ALWAYS_SOFTWARE=1 mpv ppo_render_step10000.mp4

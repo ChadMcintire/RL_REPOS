@@ -1,0 +1,22 @@
+#install gcc-12
+sudo apt install gcc-12 g++-12
+
+#update the alternative
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60
+sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 60
+
+#select it if there are other options
+sudo update-alternatives --set gcc /usr/bin/gcc-12
+sudo update-alternatives --set g++ /usr/bin/g++-12
+
+#check that the alternatives are updated 
+gcc --version
+g++ --version
+
+
+wget https://us.download.nvidia.com/tesla/570.148.08/nvidia-driver-local-repo-ubuntu2204-570.148.08_1.0-1_amd64.deb
+sudo dpkg -i nvidia-driver-local-repo-ubuntu2204-570.148.08_1.0-1_amd64.deb
+sudo cp /var/nvidia-driver-local-repo-ubuntu2204-570.148.08/nvidia-driver-local-DEDEBB20-keyring.gpg /usr/share/keyrings/
+sudo apt-get update
+sudo apt install nvidia-driver-570
+sudo reboot

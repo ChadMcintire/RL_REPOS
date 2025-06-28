@@ -1,0 +1,26 @@
+#have to run this for some reason
+#also add to ~/.bashrc
+export CONDARC=$HOME/.condarc
+export TMPDIR=/mnt/sde/tmp
+export PIP_CACHE_DIR=/mnt/sde/pip-cache
+
+#example setup
+conda create -p /mnt/sde/conda-envs/dist_env python=3.12 -y
+
+#in ~/.condarc we should have:
+
+envs_dirs:
+  - /mnt/sde/conda-envs
+pkgs_dirs:
+  - /mnt/sde/conda-pkgs
+
+#make a place to install packages and envs on the current drive 
+mkdir /mnt/sde/conda-envs
+mkdir /mnt/sde/conda-pkgs
+
+#might need this
+export PATH="$HOME/.local/bin:$PATH"
+
+
+
+

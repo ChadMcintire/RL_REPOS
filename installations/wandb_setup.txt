@@ -1,0 +1,12 @@
+# Make the storage directory
+mkdir -p /mnt/sde/wandb_logs/wandb
+chmod -R 777 /mnt/sde/wandb_logs
+
+# Set environment variables explicitly
+# maybe add to bash rc
+export WANDB_DIR=/mnt/sde/wandb_logs
+export WANDB_CONFIG_DIR=/mnt/sde/wandb_logs/config
+export TMPDIR=/mnt/sde/tmp
+export WANDB_API_KEY=18623466b3556046867e52c76db80ee54e2d6be5
+
+
