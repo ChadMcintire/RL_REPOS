@@ -10,9 +10,10 @@ def set_random_seeds(seed):
     random.seed(seed)
     torch.random.manual_seed(seed)
 
-
+#you cannot directly use torch.nn.HuberLoss to match the FQF paper, because the original FQF loss function involves quantile regression with the asymmetric weighting:
+#This is not supported by torch.nn.HuberLoss, which assumes a symmetric loss between a target and a prediction and does not allow weighting the error per quantile.
 def huber_loss(x, kappa):
-    return torch.where(torch.abs(x) <= kappa,
-                       0.5 * x.pow(2),
-                       kappa * (torch.abs(x) - 0.5 * kappa)
-                       )
+    abs_x = x.abs()
+    quadratic = 0.5 * x.pow(2)
+    linear = kappa * (abs_x - 0.5 * kappa)
+    return torch.where(abs_x <= kappa, quadratic, linear)
