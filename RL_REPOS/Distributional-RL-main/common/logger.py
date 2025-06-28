@@ -13,9 +13,14 @@ from pathlib import Path
 
 class Logger:
     def __init__(self, agent, **config):
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")#datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        agent_name = config.get("agent_name", "Agent")
+        env_name = config.get("env_name", "Env").replace("NoFrameskip-v4", "").replace("-", "")
+        self.run_name = f"run-{agent_name}-{env_name}-{timestamp}"
+        self.log_dir = self.run_name 
+
         self.config = config
         self.agent = agent
-        self.log_dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.start_time = 0
         self.duration = 0
         self.running_reward = 0
@@ -33,7 +38,10 @@ class Logger:
             wandb.init(project=self.config["agent_name"],
                        config=config,
                        job_type="train",
-                       name=self.log_dir)
+                       name=self.run_name,
+                       id=self.run_name,
+                       resume="allow"
+                       )
         except Exception as e:
             print(f"[wandb] Init failed: {e}")
             self.wandb_active = False
@@ -45,9 +53,6 @@ class Logger:
 
 
     def create_weights_folder(self):
-        #weights_dir = Path("weights")
-        #weights_dir.mkdir(exist_ok=True)
-        #(weights_dir / dir_name).mkdir(exist_ok=True)
         weights_path = Path("runs") / self.log_dir / "weights"
         weights_path.mkdir(parents=True, exist_ok=True)  # Create the full directory path if it doesn't exist
 
