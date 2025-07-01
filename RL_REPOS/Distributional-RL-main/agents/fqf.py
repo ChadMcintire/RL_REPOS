@@ -72,12 +72,3 @@ class FQF(BaseAgent):
 
         return loss.item()
 
-    @staticmethod
-    def get_configs():
-        configs = {"n_embedding": 64,
-                   "kappa": 1,
-                   "N": 32,
-                   "lr": 5e-5,
-                   "fp_lr": 2.5e-9
-                   }
-        return configs

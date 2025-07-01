@@ -10,11 +10,6 @@ AGENTS = dict(IQN=IQN,
               )
 
 
-def get_agent_configs(**configs):
-    agent_configs = AGENTS[configs["agent_name"]].get_configs()
-    return {**configs, **agent_configs}
-
-
 def get_agent(cfg_agent):
     name = cfg_agent.agent.name.upper()
     return AGENTS[name](cfg_agent)

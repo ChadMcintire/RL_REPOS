@@ -56,10 +56,3 @@ class QRDQN(BaseAgent):
 
         return loss.item()
 
-    @staticmethod
-    def get_configs():
-        configs = {"kappa": 1,
-                   "N": 200,
-                   "lr": 5e-5
-                   }
-        return configs

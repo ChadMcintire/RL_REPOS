@@ -72,11 +72,3 @@ class C51(BaseAgent):
 
         return loss.item()
 
-    @staticmethod
-    def get_configs():
-        configs = {"v_max": 10,
-                   "v_min": -10,
-                   "n_atoms": 51,
-                   "lr": 2.5e-4
-                   }
-        return configs

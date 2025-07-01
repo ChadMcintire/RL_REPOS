@@ -63,6 +63,3 @@ class BaseAgent:
     def train(self):
         raise NotImplementedError
 
-    @staticmethod
-    def get_configs():
-        raise NotImplementedError

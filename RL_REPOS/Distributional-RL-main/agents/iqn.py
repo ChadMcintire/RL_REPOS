@@ -54,15 +54,3 @@ class IQN(BaseAgent):
 
         return loss.item()
 
-    @staticmethod
-    def get_configs():
-        configs = {"n_embedding": 64,
-                   "kappa": 1,
-                   # N = 64 if earlier phases of training is considered, 32 if final phases is preferable.
-                   # according to Fig 2 of the paper.
-                   "N": 64,
-                   "N_prime": 64,
-                   "K": 32,
-                   "lr": 5e-5
-                   }
-        return configs
