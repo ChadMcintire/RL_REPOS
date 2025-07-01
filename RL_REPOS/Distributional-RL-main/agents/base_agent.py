@@ -6,11 +6,11 @@ from torch import from_numpy
 
 
 class BaseAgent:
-    def __init__(self, **configs):
-        self.configs = configs
-        self.batch_size = configs["batch_size"]
+    def __init__(self, config):
+        self.config = config
+        self.batch_size = config.batch_size
         self.exp_eps = 1
-        self.memory = TorchReplayBuffer(configs["mem_size"])
+        self.memory = TorchReplayBuffer(config.mem_size)
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.online_model = None
         self.target_model = None
@@ -18,7 +18,7 @@ class BaseAgent:
 
     def choose_action(self, state):
         if random.random() < self.exp_eps:
-            return random.randint(0, self.configs["n_actions"] - 1)
+            return random.randint(0, self.config.env.n_actions - 1)
         else:
             state = np.expand_dims(state, axis=0)
             state = from_numpy(state).byte().to(self.device)

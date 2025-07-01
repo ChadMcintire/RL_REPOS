@@ -9,13 +9,16 @@ from collections import deque
 from threading import Thread
 import wandb
 from pathlib import Path
+from omegaconf import OmegaConf
 
 
 class Logger:
-    def __init__(self, agent, **config):
+    def __init__(self, agent, config):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")#datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        agent_name = config.get("agent_name", "Agent")
-        env_name = config.get("env_name", "Env").replace("NoFrameskip-v4", "").replace("-", "")
+        agent_name = config.agent.name.upper()
+        env_name = config.env.env_name.replace("NoFrameskip-v4", "") \
+                           .replace("-", "") \
+                           .capitalize()
         self.run_name = f"run-{agent_name}-{env_name}-{timestamp}"
         self.log_dir = self.run_name 
 
@@ -32,11 +35,12 @@ class Logger:
         self.thread = Thread()
         self.to_gb = lambda b: b / 1024 / 1024 / 1024
         self.wandb_active = False
+        flat_config = OmegaConf.to_container(config, resolve=True)
 
 
         try:
-            wandb.init(project=self.config["agent_name"],
-                       config=config,
+            wandb.init(project=agent_name,
+                       config=flat_config,
                        job_type="train",
                        name=self.run_name,
                        id=self.run_name,

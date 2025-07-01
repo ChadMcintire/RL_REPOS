@@ -1,36 +1,40 @@
 # Reference: https://github.com/ku2482/fqf-iqn-qrdqn.pytorch
 
-from common import set_random_seeds, get_common_configs, make_atari
+from common import set_random_seeds, make_atari
 from common import Logger, Evaluator
-from agents import get_agent_configs, get_agent
+from agents import get_agent
 import os
+import hydra
+from omegaconf import DictConfig, OmegaConf
 
-if __name__ == "__main__":
-    configs = get_common_configs()
-    set_random_seeds(configs["seed"])
-
-    configs = get_agent_configs(**configs)
-    print("params:", configs)
+@hydra.main(config_path="conf", config_name="config", version_base="1.3")
+def main(config: DictConfig):
+    set_random_seeds(config.seed)
 
     if os.path.exists("api_key.wandb"):
         with open("api_key.wandb", 'r') as f:
             os.environ["WANDB_API_KEY"] = f.read()
-            if not configs["online_wandb"]:
+            if not config.online_wandb:
                 os.environ["WANDB_MODE"] = "offline"
 
-    test_env = make_atari(configs["env_name"], configs["seed"])
-    configs.update({"n_actions": test_env.action_space.n})
+    test_env = make_atari(config.env.env_name, config.seed)
+
+    n_actions = int(test_env.action_space.n)
+    config.env.n_actions = n_actions
     del test_env
-    print(f"Environment: {configs['env_name']}\n"
-          f"Number of actions: {configs['n_actions']}")
+    
+    print(f"Environment: {config.env.env_name}\n"
+          f"Number of actions: {config.env.n_actions}")
 
-    env = make_atari(configs["env_name"], configs["seed"])
-    agent = get_agent(**configs)
-    logger = Logger(agent=agent, **configs)
+    
+    agent = get_agent(config)
+ 
+    env = make_atari(config.env.env_name, config.seed)
+    logger = Logger(agent, config)
 
-    if not configs["do_test"]:
+    if not config.do_test:
         total_steps = 0
-        for episode in range(1, 1 + configs["max_episodes"]):
+        for episode in range(1, 1 + config.max_episodes):
             logger.on()
             episode_reward = 0
             episode_loss = 0
@@ -42,23 +46,22 @@ if __name__ == "__main__":
                 done = terminated or truncated  
                 agent.store(state, reward, done, action, next_state)
                 episode_reward += reward
-                if total_steps % configs["train_interval"] == 0:
+                if total_steps % config.train_interval == 0:
                     loss = agent.train()
                     episode_loss += loss
-                if total_steps % configs["target_update_freq"] == 0:
+                if total_steps % config.target_update_freq == 0:
                     agent.hard_target_update()
                 if done:
                     break
                 state = next_state
 
-            agent.exp_eps = agent.exp_eps - 0.005 if agent.exp_eps > configs["min_exp_eps"] + 0.005 else configs[
-                "min_exp_eps"]
+            agent.exp_eps = agent.exp_eps - 0.005 if agent.exp_eps > config.min_exp_eps + 0.005 else config.min_exp_eps
 
             logger.off()
             logger.log(
             episode=episode,
             episode_reward=episode_reward,
-            loss=episode_loss / step * configs["train_interval"],
+            loss=episode_loss / step * config.train_interval,
             step=total_steps,
             e_len=step
             )
@@ -67,5 +70,9 @@ if __name__ == "__main__":
         checkpoint = logger.load_weights()
         agent.online_model.load_state_dict(checkpoint["online_model_state_dict"])
         agent.exp_eps = 0
-        evaluator = Evaluator(agent, **configs)
+        evaluator = Evaluator(agent, config)
         evaluator.evaluate()
+
+
+if __name__ == "__main__":
+    main()

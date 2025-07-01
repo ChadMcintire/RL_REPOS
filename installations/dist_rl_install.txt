@@ -6,3 +6,4 @@ pip install wandb
 pip install ale-py
 pip install gymnasium[atari,accept-rom-license]
 pip install torchrl
+pip install hydra-core

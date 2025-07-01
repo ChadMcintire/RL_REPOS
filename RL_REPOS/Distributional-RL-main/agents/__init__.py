@@ -15,5 +15,6 @@ def get_agent_configs(**configs):
     return {**configs, **agent_configs}
 
 
-def get_agent(**kwargs):
-    return AGENTS[kwargs["agent_name"]](**kwargs)
+def get_agent(cfg_agent):
+    name = cfg_agent.agent.name.upper()
+    return AGENTS[name](cfg_agent)
