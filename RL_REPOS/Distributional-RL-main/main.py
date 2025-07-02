@@ -7,6 +7,7 @@ import os
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
+
 @hydra.main(config_path="conf", config_name="config", version_base="1.3")
 def main(config: DictConfig):
     set_random_seeds(config.seed)
@@ -47,8 +48,8 @@ def main(config: DictConfig):
                 agent.store(state, reward, done, action, next_state)
                 episode_reward += reward
                 if total_steps % config.train_interval == 0:
-                    loss = agent.train()
-                    episode_loss += loss
+                    metrics = agent.train()
+                    episode_loss += metrics["loss/total"]
                 if total_steps % config.target_update_freq == 0:
                     agent.hard_target_update()
                 if done:
@@ -58,13 +59,16 @@ def main(config: DictConfig):
             agent.exp_eps = agent.exp_eps - 0.005 if agent.exp_eps > config.min_exp_eps + 0.005 else config.min_exp_eps
 
             logger.off()
-            logger.log(
-            episode=episode,
-            episode_reward=episode_reward,
-            loss=episode_loss / step * config.train_interval,
-            step=total_steps,
-            e_len=step
-            )
+            log_data = {
+                        'episode': episode,
+                        'episode_reward': episode_reward,
+                        'loss': episode_loss / step * config.train_interval,
+                        'step': total_steps,
+                        'e_len': step,
+                        }
+            combined_log_data = log_data | metrics 
+            logger.log(**combined_log_data)
+
 
     else:
         checkpoint = logger.load_weights()

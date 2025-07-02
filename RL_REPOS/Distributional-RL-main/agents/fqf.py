@@ -29,7 +29,7 @@ class FQF(BaseAgent):
 
     def train(self):
         if len(self.memory) < self.config.init_mem_size_to_train:
-            return 0
+            return {"loss/total": 0}
         batch = self.memory.sample(self.batch_size)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)  # noqa
 
@@ -70,5 +70,25 @@ class FQF(BaseAgent):
         fp_loss.backward()
         self.fp_optimizer.step()
 
-        return loss.item()
+        # for monitoring
+        total_norm = torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 1e10)
+
+#        return loss.item()
+        
+        return {
+        "loss/total": loss.item(),
+        "loss/huber": hloss.mean().item(),
+        "loss/fraction_proposal": fp_loss.item(),
+        "entropy/taus": ent.mean().item(),
+        "epsilon": self.exp_eps,
+        "td_error/mean": delta.abs().mean().item(),
+        "td_error/std": delta.std().item(),
+        "quantile/spread": (z.max() - z.min()).mean().item(),
+        "quantile/mean": z.mean().item(),
+        "grad/total_norm": total_norm.item(),
+        "param_norm/online_model": sum(p.norm().item() for p in self.online_model.parameters() if p.requires_grad),
+        "replay/fill": len(self.memory) / self.config.mem_size,
+        "reward/mean": rewards.mean().item(),
+        "reward/std": rewards.std().item(),
+    }
 
