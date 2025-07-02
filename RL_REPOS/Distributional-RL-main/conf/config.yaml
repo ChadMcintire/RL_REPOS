@@ -3,9 +3,10 @@ defaults:
   - env: atari         # optional env defaults
   - _self_
 
+eval_interval: 10
 mem_size: 850000
 seed: 132
-interval: 100
+interval: 10 
 do_test: false
 online_wandb: false
 

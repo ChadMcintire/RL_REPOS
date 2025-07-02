@@ -57,8 +57,21 @@ class BaseAgent:
         for param in self.target_model.parameters():
             param.requires_grad = False
 
+    # set model to eval, remove exploration
     def prepare_to_play(self):
+        if not hasattr(self, "_exp_eps_backup"):
+            self._exp_eps_backup = self.exp_eps
         self.online_model.eval()
+        self.exp_eps=0
+
+    # set model to train again, reinstate exploration
+    def restore_after_play(self):
+        if hasattr(self, "_exp_eps_backup"):
+            self.exp_eps = self._exp_eps_backup
+        del self._exp_eps_backup
+        self.online_model.train()
+
+
 
     def train(self):
         raise NotImplementedError

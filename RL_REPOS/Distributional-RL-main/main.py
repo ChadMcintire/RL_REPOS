@@ -69,6 +69,11 @@ def main(config: DictConfig):
             combined_log_data = log_data | metrics 
             logger.log(**combined_log_data)
 
+            if episode % config.eval_interval == 0:
+                evaluator = Evaluator(agent, config)
+                evaluator.evaluate()
+
+
 
     else:
         checkpoint = logger.load_weights()

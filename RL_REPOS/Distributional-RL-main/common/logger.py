@@ -97,10 +97,10 @@ class Logger:
         memory = psutil.virtual_memory()
         assert self.to_gb(memory.used) < 0.99 * self.to_gb(memory.total)
 
-        if episode % (self.config["interval"] // 3) == 0:
-            self.save_weights()
+        if episode % (self.config.interval // 3) == 0:
+            self.save_weights(step)
 
-        if episode % self.config["interval"] == 0:
+        if episode % self.config.interval == 0:
             print(
                 f"E: {episode} | "
                 f"E_Reward: {episode_reward:.1f} | "
@@ -144,23 +144,30 @@ class Logger:
             print(f"[wandb] Log failed: {e}")
 
 
-    def save_weights(self):
+    def save_weights(self, step):
         # Define the path: runs/<log_dir>/weights/params.pth
         weights_path = Path("runs") / self.log_dir / "weights"
         weights_path.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
-        path = weights_path / "params.pth"
+        path = weights_path / f"params_step{step}.pth"
+        print("path", path)
         torch.save({"online_model_state_dict": self.agent.online_model.state_dict()}, path)
 
     def load_weights(self):
-        # Search for all runs/<log_dir>/weights directories
-        model_dirs = sorted(glob.glob("runs/*/weights"))
-        if not model_dirs:
-            raise FileNotFoundError("No saved weights found in 'runs/*/weights'.")
+        weights_path = Path("runs") / self.log_dir / "weights"
+        checkpoint_files = list(weights_path.glob("params_step*.pth"))
+        if not checkpoint_files:
+            raise FileNotFoundError(f"No checkpoint files found in {weights_path}")
 
-        latest_weights_dir = model_dirs[-1]
-        checkpoint_path = Path(latest_weights_dir) / "params.pth"
-        checkpoint = torch.load(checkpoint_path)
+        # pick checkpoint with max step
+        def extract_step(f):
+            import re
+            match = re.search(r"params_step(\d+)\.pth", f.name)
+            return int(match.group(1)) if match else -1
 
-        # Set log_dir to the parent of weights (i.e., the run directory name)
-        self.log_dir = Path(latest_weights_dir).parent.name
+        checkpoint_files.sort(key=extract_step)
+        latest_checkpoint = checkpoint_files[-1]
+
+        print(f"Loading checkpoint: {latest_checkpoint}")
+        checkpoint = torch.load(latest_checkpoint)
         return checkpoint
+

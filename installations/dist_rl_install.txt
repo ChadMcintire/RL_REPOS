@@ -7,3 +7,4 @@ pip install ale-py
 pip install gymnasium[atari,accept-rom-license]
 pip install torchrl
 pip install hydra-core
+pip install "gymnasium[other]

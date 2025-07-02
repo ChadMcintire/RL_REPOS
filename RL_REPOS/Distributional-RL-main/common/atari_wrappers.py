@@ -9,10 +9,11 @@ from gymnasium.wrappers import TimeLimit
 def make_atari(env_name: str,
                episodic_life: bool = True,
                clip_reward: bool = True,
-               seed: int = 123
+               seed: int = 123,
+               render_mode=None
                ):
     gym.register_envs(ale_py)
-    env = gym.make(env_name)
+    env = gym.make(env_name, render_mode=render_mode)
     if "NoFrameskip" not in env.spec.id:  # noqa
         raise ValueError(f"env should be from `NoFrameskip` type got: {env_name}")  # noqa
     env = NoopResetEnv(env)
