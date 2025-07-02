@@ -1,0 +1,7 @@
+name: IQN
+n_embedding: 64
+kappa: 1
+N: 64        # As per early training phase
+N_prime: 64
+K: 32
+lr: 5e-5

@@ -1,0 +1,21 @@
+defaults:
+  - agent: fqf 
+  - env: atari         # optional env defaults
+  - _self_
+
+mem_size: 850000
+seed: 132
+interval: 100
+do_test: false
+online_wandb: false
+
+# Default hyperparameters
+state_shape: [4, 84, 84]
+gamma: 0.99
+train_interval: 4
+target_update_freq: 10000
+init_mem_size_to_train: 1000
+max_episodes: 10000
+adam_eps: 0.0003125  # 0.01 / 32
+min_exp_eps: 0.01
+batch_size: 32

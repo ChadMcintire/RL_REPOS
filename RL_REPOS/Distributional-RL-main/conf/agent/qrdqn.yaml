@@ -1,0 +1,4 @@
+name: QRDQN
+kappa: 1
+N: 200
+lr: 5e-5

@@ -1,0 +1,5 @@
+name: C51
+lr: 0.00025
+v_max: 10
+v_min: -10
+n_atoms: 51
