@@ -8,35 +8,40 @@ import datetime
 
 
 class Evaluator:
-    def __init__(self, agent, config, max_episode=3):
+    def __init__(self, agent, config, max_episodes=3):
         self.config = config
-        self.env = make_atari(
+        self.agent = agent
+        self.max_episodes = max_episodes
+
+        self.env = self._make_eval_env()
+        self.agent.prepare_to_play()
+
+    def _make_eval_env(self):
+        """Create the Atari environment with video recording enabled."""
+        env = make_atari(
             self.config.env.env_name, 
             render_mode="rgb_array",
             episodic_life=False, 
             clip_reward=False, 
-            seed=config.seed,
+            seed=self.config.seed,
         )
 
-
-        video_dir = self.get_video_path(config)
+        video_dir = self._get_video_path(self.config)
         
-        self.env = RecordVideo(
-            self.env,
+        env = RecordVideo(
+            env,
             video_folder=video_dir,
             episode_trigger=lambda ep_id: True,
             name_prefix="eval"
         )
+        return env
 
-        self.max_episode = max_episode
-        self.agent = agent
-        self.agent.prepare_to_play()
 
     def evaluate(self):
         total_reward = 0
         print("--------Play mode--------")
 
-        for ep in range(self.max_episode):
+        for ep in range(self.max_episodes):
             obs, info = self.env.reset()
             episode_reward = 0
             done = False
@@ -47,15 +52,16 @@ class Evaluator:
                 done = terminated or truncated
                 episode_reward += reward
 
-            print(f"Episode {ep + 1} reward: {episode_reward}")
+            print(f"[Episode {ep + 1}] Reward: {episode_reward:.2f}")
             total_reward += episode_reward
 
-        print("Average Total Reward:", total_reward / self.max_episode)
+        avg_reward = total_reward / self.max_episodes
+        print(f"Average Total Reward: {avg_reward:.2f}")
         self.env.close()
         self.agent.restore_after_play()
 
-    def get_video_path(self, config):
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d")#datetime.datetime.now().strftime("%Y%m%d_%H%M")
+    def _get_video_path(self, config):
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         agent_name = config.agent.name.upper()
         env_name = config.env.env_name.replace("NoFrameskip-v4", "") \
                        .replace("-", "") \
