@@ -88,6 +88,7 @@ class FQF(BaseAgent):
         "grad/total_norm": total_norm.item(),
         "param_norm/online_model": sum(p.norm().item() for p in self.online_model.parameters() if p.requires_grad),
         "replay/fill": len(self.memory) / self.config.mem_size,
+        "replay/size": len(self.memory),
         "reward/mean": rewards.mean().item(),
         "reward/std": rewards.std().item(),
     }

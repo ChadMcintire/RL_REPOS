@@ -31,8 +31,14 @@ class TorchReplayBuffer:
         self.buffer.extend(td)
 
     def sample(self, batch_size):
-        # Returns a sampled TensorDict
-        return self.buffer.sample(batch_size).to(self.device)
+        batch = self.buffer.sample(batch_size).to(self.device)
+
+        # Sampler exhausted — reset and try again
+        if batch.batch_size[0] != batch_size:
+            print("starting buffer over")
+            batch = self.buffer.sample(batch_size).to(self.device)
+
+        return batch
 
     def __len__(self):
         return len(self.buffer)

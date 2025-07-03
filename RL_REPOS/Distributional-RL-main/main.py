@@ -61,7 +61,7 @@ def main(config: DictConfig):
             logger.off()
             log_data = {
                         'episode': episode,
-                        'episode_reward': episode_reward,
+                        'reward/episode_reward': episode_reward,
                         'loss': episode_loss / step * config.train_interval,
                         'step': total_steps,
                         'e_len': step,
