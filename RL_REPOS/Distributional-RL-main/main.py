@@ -71,7 +71,7 @@ def main(config: DictConfig):
 
             if episode % config.eval_interval == 0:
                 evaluator = Evaluator(agent, config)
-                evaluator.evaluate()
+                evaluator.evaluate(total_steps)
 
 
 
