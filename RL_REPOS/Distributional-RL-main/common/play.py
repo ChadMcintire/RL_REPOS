@@ -5,6 +5,7 @@ import time
 from gymnasium.wrappers import RecordVideo
 from pathlib import Path
 import datetime
+import wandb
 
 
 class Evaluator:
@@ -27,7 +28,6 @@ class Evaluator:
         )
 
         video_dir = self._get_video_path(self.config)
-        
         env = RecordVideo(
             env,
             video_folder=video_dir,
@@ -37,7 +37,7 @@ class Evaluator:
         return env
 
 
-    def evaluate(self):
+    def evaluate(self, global_step):
         total_reward = 0
         print("--------Play mode--------")
 
@@ -53,10 +53,16 @@ class Evaluator:
                 episode_reward += reward
 
             print(f"[Episode {ep + 1}] Reward: {episode_reward:.2f}")
+            wandb.log({
+                "eval/episode_reward": episode_reward,
+                "eval/global_step": global_step,
+            })
             total_reward += episode_reward
 
         avg_reward = total_reward / self.max_episodes
         print(f"Average Total Reward: {avg_reward:.2f}")
+        wandb.log({"eval/average_reward": avg_reward})
+
         self.env.close()
         self.agent.restore_after_play()
 
