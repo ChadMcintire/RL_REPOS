@@ -10,7 +10,7 @@ class BaseAgent:
         self.config = config
         self.batch_size = config.batch_size
         self.exp_eps = 1
-        self.memory = TorchReplayBuffer(config.mem_size)
+        self.memory = TorchReplayBuffer(config)
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.online_model = None
         self.target_model = None

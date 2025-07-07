@@ -67,13 +67,13 @@ class Logger:
         self.duration = time.time() - self.start_time
 
     def log(self, **kwargs):
-        required_keys = ["episode", "episode_reward", "loss", "step", "e_len"]
+        required_keys = ["episode", "reward/episode_reward", "loss", "step", "e_len"]
         for key in required_keys:
             if key not in kwargs:
                 raise ValueError(f"Missing required log key: '{key}'")
 
         episode = kwargs["episode"]
-        episode_reward = kwargs["episode_reward"]
+        episode_reward = kwargs["reward/episode_reward"]
         loss = kwargs["loss"]
         step = kwargs["step"]
         e_len = kwargs["e_len"]
