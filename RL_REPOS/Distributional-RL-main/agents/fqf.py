@@ -10,22 +10,14 @@ class FQF(BaseAgent):
         super(FQF, self).__init__(config)
 
         # online and target networks
-        self.online_model = FQFModel(
+        online_model = FQFModel(
             config.state_shape,
             config.env.n_actions,
             config.agent.n_embedding,
             config.agent.N
         ).to(self.device)
 
-        self.target_model = FQFModel(
-            config.state_shape,
-            config.env.n_actions,
-            config.agent.n_embedding,
-            config.agent.N
-        ).to(self.device)
-
-        # initialize target weights
-        self.hard_target_update()
+        self.set_models(online_model)
 
         # optimizers
         self.optimizer = torch.optim.Adam(
