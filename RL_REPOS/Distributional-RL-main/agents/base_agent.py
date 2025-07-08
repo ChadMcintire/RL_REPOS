@@ -88,8 +88,12 @@ class BaseAgent:
     def hard_target_update(self) -> None:
         self.update_target(tau=1.0)
 
-    def soft_target_update(self) -> None:
-        self.update_target(tau=self.config.soft_tau)
+    def soft_target_update(self, tau: float = None) -> None:
+        # default to the small mixing factor in config
+        if tau is None:
+            tau = self.config.soft_tau
+        self.update_target(tau)
+
 
     # set model to eval, remove exploration
     def prepare_to_play(self) -> None:

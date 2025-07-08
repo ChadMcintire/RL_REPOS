@@ -50,8 +50,6 @@ def main(config: DictConfig):
                 if total_steps % config.train_interval == 0:
                     metrics = agent.train()
                     episode_loss += metrics["loss/total"]
-                    # soft update on every train step instead of a hard sync
-                    agent.soft_target_update()
                 if done:
                     break
                 state = next_state
@@ -69,7 +67,7 @@ def main(config: DictConfig):
             combined_log_data = log_data | metrics 
             logger.log(**combined_log_data)
 
-            if episode % config.eval_interval == 0:
+            if len(agent.memory) > config.init_mem_size_to_train and episode % config.eval_interval == 0:
                 evaluator = Evaluator(agent, config)
                 evaluator.evaluate(total_steps)
 

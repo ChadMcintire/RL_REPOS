@@ -139,7 +139,12 @@ class Logger:
     @staticmethod
     def log_metrics(metrics):
         try:
-            wandb.log(metrics)
+            # if you’ve included 'step' in your metrics dict, use that for WandB’s x-axis
+            step = metrics.get("step", None)
+            if step is not None:
+                wandb.log(metrics, step=step)
+            else:
+                wandb.log(metrics)
         except Exception as e:
             print(f"[wandb] Log failed: {e}")
 

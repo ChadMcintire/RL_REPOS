@@ -38,6 +38,10 @@ class FQF(BaseAgent):
         # sample a batch + replay info
         batch, info = self.memory.sample(self.batch_size)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)  # noqa
+        # ----------------------------------------------------------------------------
+        # rescale rewards if needed
+        rewards = rewards * self.config.reward_scale
+        # ----------------------------------------------------------------------------
 
         # compute taus for quantile networks
         taus, tau_hats, ent = self.online_model.get_taus(states)
@@ -75,7 +79,8 @@ class FQF(BaseAgent):
         if isinstance(self.memory.sampler, PrioritizedSampler):
             # importance-sampling weights & indices
             is_weights = torch.as_tensor(info["_weight"], device=self.device)
-            is_weights = torch.clamp(is_weights, max=10.0)
+            # clamp them so no single sample blows up
+            is_weights = torch.clamp(is_weights, max=self.config.is_weight_max)
             #is_weights = torch.tensor(info["_weight"], device=self.device)  # [batch]
             indices    = info["index"]                                      # np.ndarray
 
@@ -89,9 +94,13 @@ class FQF(BaseAgent):
             # uniform sampling
             loss = sample_loss.mean()
 
-        # optimizer step
+        # optimizer step + gradient clipping
         self.optimizer.zero_grad()
         loss.backward()
+        total_norm = torch.nn.utils.clip_grad_norm_(
+                self.online_model.parameters(),
+                max_norm=self.config.max_grad_norm
+        )
         self.optimizer.step()
 
         # fraction-proposal update (same as before)
@@ -112,10 +121,11 @@ class FQF(BaseAgent):
         fp_loss.backward()
         self.fp_optimizer.step()
 
-        # gradient norm for logging
-        total_norm = torch.nn.utils.clip_grad_norm_(
-            self.online_model.parameters(), max_norm=1e10
-        )
+        # ----------------------------------------------------------------------------
+        # soft‐update the target network every train() call
+        self.soft_target_update()    # uses self.config.soft_tau by default
+        # ----------------------------------------------------------------------------
+
 
         return {
         "loss/total": loss.item(),
@@ -127,7 +137,7 @@ class FQF(BaseAgent):
         "td_error/std": delta.std().item(),
         "quantile/spread": (z_pred.max() - z_pred.min()).mean().item(),
         "quantile/mean": z_pred.mean().item(),
-        "grad/total_norm": total_norm.item(),
+        "grad/total_norm": total_norm,
         "param_norm/online_model": sum(p.norm().item() for p in self.online_model.parameters() if p.requires_grad),
         "replay/fill": len(self.memory) / self.config.mem_size,
         "replay/size": len(self.memory),

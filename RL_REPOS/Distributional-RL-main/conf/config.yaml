@@ -22,3 +22,6 @@ adam_eps: 0.0003125  # 0.01 / 32
 min_exp_eps: 0.01
 batch_size: 32
 soft_tau: 0.005
+is_weight_max: 5.0
+max_grad_norm: 0.5
+reward_scale: 1.0
