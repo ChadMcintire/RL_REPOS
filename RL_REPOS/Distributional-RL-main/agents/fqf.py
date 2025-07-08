@@ -83,6 +83,7 @@ class FQF(BaseAgent):
         if isinstance(self.memory.sampler, PrioritizedSampler):
             # importance-sampling weights & indices
             is_weights = torch.as_tensor(info["_weight"], device=self.device)
+            is_weights = torch.clamp(is_weights, max=10.0)
             #is_weights = torch.tensor(info["_weight"], device=self.device)  # [batch]
             indices    = info["index"]                                      # np.ndarray
 

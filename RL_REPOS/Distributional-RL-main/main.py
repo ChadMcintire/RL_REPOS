@@ -50,8 +50,8 @@ def main(config: DictConfig):
                 if total_steps % config.train_interval == 0:
                     metrics = agent.train()
                     episode_loss += metrics["loss/total"]
-                if total_steps % config.target_update_freq == 0:
-                    agent.hard_target_update()
+                    # soft update on every train step instead of a hard sync
+                    agent.soft_target_update(tau=config.soft_tau)
                 if done:
                     break
                 state = next_state

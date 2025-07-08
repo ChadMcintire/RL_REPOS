@@ -57,6 +57,11 @@ class BaseAgent:
         for param in self.target_model.parameters():
             param.requires_grad = False
 
+    def soft_target_update(self, tau: float = 0.005):
+        for p_t, p in zip(self.target_model.parameters(),
+                          self.online_model.parameters()):
+            p_t.data.mul_(1 - tau).add_(tau * p.data)
+
     # set model to eval, remove exploration
     def prepare_to_play(self):
         if not hasattr(self, "_exp_eps_backup"):

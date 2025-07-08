@@ -2,5 +2,5 @@ name: FQF
 lr: 5e-5
 fp_lr: 5e-6 #2.5e-9
 n_embedding: 64
-kappa: 1
+kappa: 1.0
 N: 32
