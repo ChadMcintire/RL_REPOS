@@ -41,7 +41,7 @@ class FQFModel(BaseModel):
         return z.view(states.size(0), taus.size(1), -1)
 
     def get_qvalues(self, x):
-        taus, tau_hats, _ = self.get_taus(x)
+        taus, tau_hats, *_ = self.get_taus(x)
         z = self.forward((x, tau_hats))
         q_values = torch.sum((taus[:, 1:, None] - taus[:, :-1, None]) * z, dim=1)
         return q_values
@@ -57,19 +57,37 @@ class FQFModel(BaseModel):
 class FractionProposalModel(nn.Module):
     def __init__(self, in_dim, out_dim):
         super(FractionProposalModel, self).__init__()
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-        self.layer = nn.Linear(self.in_dim, self.out_dim)
-
+        self.layer = nn.Linear(in_dim, out_dim)
         nn.init.xavier_uniform_(self.layer.weight)
         self.layer.bias.data.zero_()
 
     def forward(self, x):
-        x = self.layer(x)
-        x = F.softmax(x, dim=-1)
-        ent = -torch.sum(x * torch.log(x), dim=-1)
-        taus = torch.cumsum(x, -1)
-        tau_0 = torch.zeros((x.size(0), 1), device=taus.device)
-        taus = torch.concat([tau_0, taus], -1)
-        tau_hats = (taus[:, :-1] + taus[:, 1:]) / 2
-        return taus, tau_hats, ent
+        # raw logits -> stable log‐softmax + exp
+        logits = self.layer(x)
+        #use log softmax instead
+        temp = 1.0
+        log_probs = F.log_softmax(logits / temp, dim=-1)
+        raw_probs = torch.exp(log_probs)
+
+        # clamp to avoid exact zeros (and infinities in log)
+        eps = 1e-6
+        clamped_probs = raw_probs.clamp(min=eps, max=1.0)
+
+        #recompute log-probs of the clamped distribution
+        clamped_log_probs = torch.log(clamped_probs)
+
+        # entropy: safe because log_probs is finite and probs > 0
+        ent = -(clamped_probs * clamped_log_probs).sum(dim=-1)
+
+        # build cumulative fractions
+        taus = torch.cumsum(clamped_probs, dim=-1)
+        batch, N1 = taus.shape
+        taus = torch.cat([
+            torch.zeros(batch, 1, device=taus.device),
+            taus
+        ], dim=-1)
+
+        # mid‐points for quantile regression
+        tau_hats  = 0.5 * (taus[:, :-1] + taus[:, 1:])
+
+        return taus, tau_hats, ent, raw_probs, clamped_probs

@@ -24,4 +24,5 @@ batch_size: 32
 soft_tau: 0.005
 is_weight_max: 5.0
 max_grad_norm: 0.5
-reward_scale: 1.0
+reward_scale: 0.2
+target_support: 200
