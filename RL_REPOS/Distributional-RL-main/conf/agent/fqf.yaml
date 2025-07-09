@@ -4,3 +4,4 @@ fp_lr: 2.5e-9
 n_embedding: 64
 kappa: 1.0
 N: 32
+lmda: 0.01

@@ -6,15 +6,16 @@ import math
 
 
 class FQFModel(BaseModel):
-    def __init__(self, state_shape, num_actions, num_embedding, num_quants):
-        super(FQFModel, self).__init__(state_shape)
-        self.num_embedding = num_embedding
+    def __init__(self, config):
+        super(FQFModel, self).__init__(config.state_shape)
+        self.num_embedding = config.agent.n_embedding
+        num_quants=config.agent.N
         self.fp_layer = FractionProposalModel(self.flatten_size,
-                                              num_quants
+                                              config
                                               )
 
-        self.z = nn.Linear(512, num_actions)
-        self.phi = nn.Linear(num_embedding, self.flatten_size)
+        self.z = nn.Linear(512, config.env.n_actions)
+        self.phi = nn.Linear(self.num_embedding, self.flatten_size)
 
         nn.init.orthogonal_(self.z.weight, 0.01)
         self.z.bias.data.zero_()
@@ -55,8 +56,10 @@ class FQFModel(BaseModel):
 
 
 class FractionProposalModel(nn.Module):
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_dim, config):
         super(FractionProposalModel, self).__init__()
+        self.config=config
+        out_dim=self.config.agent.N
         self.layer = nn.Linear(in_dim, out_dim)
         nn.init.xavier_uniform_(self.layer.weight)
         self.layer.bias.data.zero_()
@@ -65,13 +68,14 @@ class FractionProposalModel(nn.Module):
         # raw logits -> stable log‐softmax + exp
         logits = self.layer(x)
         #use log softmax instead
-        temp = 1.0
+        temp = self.config.models.temp
         log_probs = F.log_softmax(logits / temp, dim=-1)
         raw_probs = torch.exp(log_probs)
 
         # clamp to avoid exact zeros (and infinities in log)
-        eps = 1e-6
-        clamped_probs = raw_probs.clamp(min=eps, max=1.0)
+        eps = self.config.models.eps
+        max = self.config.models.max
+        clamped_probs = raw_probs.clamp(min=eps, max=max)
 
         #recompute log-probs of the clamped distribution
         clamped_log_probs = torch.log(clamped_probs)

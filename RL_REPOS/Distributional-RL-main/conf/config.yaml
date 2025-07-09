@@ -1,5 +1,6 @@
 defaults:
   - agent: fqf 
+  - models: fqf
   - env: atari         # optional env defaults
   - buffer: prio
   - _self_

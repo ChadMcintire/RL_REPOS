@@ -1,0 +1,4 @@
+name: FQF
+temp: 1.0
+eps: 0.0001
+max: 1.0

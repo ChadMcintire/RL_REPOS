@@ -11,10 +11,7 @@ class FQF(BaseAgent):
 
         # online and target networks
         online_model = FQFModel(
-            config.state_shape,
-            config.env.n_actions,
-            config.agent.n_embedding,
-            config.agent.N
+                config
         ).to(self.device)
 
         self.set_models(online_model)
@@ -121,6 +118,9 @@ class FQF(BaseAgent):
             fp_grads = 2 * z - z_hat - z_hat_1
 
         fp_loss = (taus[:, 1:-1] * fp_grads.squeeze(-1)).sum(-1).mean(0)
+        lmda = config.agent.lmda 
+        fp_loss - lmda * ent
+
         self.fp_optimizer.zero_grad()
         fp_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.online_model.fp_layer.parameters(),
