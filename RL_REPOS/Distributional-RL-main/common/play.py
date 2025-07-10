@@ -12,6 +12,7 @@ class Evaluator:
     def __init__(self, agent, config, max_episodes=8):
         self.config = config
         self.agent = agent
+        self.global_step = 0
         self.max_episodes = max_episodes
 
         self.env = self._make_eval_env()
@@ -38,6 +39,7 @@ class Evaluator:
 
 
     def evaluate(self, global_step):
+        self.global_step = global_step
         total_reward = 0
         print("--------Play mode--------")
 
@@ -72,7 +74,7 @@ class Evaluator:
         env_name = config.env.env_name.replace("NoFrameskip-v4", "") \
                        .replace("-", "") \
                        .capitalize()
-        run_name = f"run-{agent_name}-{env_name}-{timestamp}"
+        run_name = f"run-{agent_name}-{env_name}-{timestamp}-{self.global_step}"
         video_path = Path("video") / run_name
         video_path.mkdir(parents=True, exist_ok=True)
         return str(video_path)

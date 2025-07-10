@@ -1,14 +1,38 @@
 name: FQF
-lr: 1e-5
-fp_lr: 1.e-7
-n_embedding: 64
-kappa: 1.0
-N: 32
-lmda: 0.01
-opt_max_norm: 0.01
-fp_max_norm: 0.05
-reward_scale: 0.2
-target_support: 150
-is_weight_max: 5.0
-adam_eps: 0.0003125  # 0.01 / 32
-min_exp_eps: 0.01
+
+# ————————————————
+# Learning rates
+# ————————————————
+lr: 1e-5 # online‐Q learning rate
+fp_lr: 1.e-7 # fraction-proposal head LR (≈100× smaller)
+adam_eps: 3e-4 # Adam ε (≈0.0003)
+
+# ————————————————
+# Network Architecture
+# ————————————————
+n_embedding: 64 # cosine feature dim
+kappa: 1.0 # Huber loss threshold
+N: 32 # number of quantiles
+lmda: 0.01 # entropy-bonus weight on τ
+
+# ————————————————
+# Gradient clipping
+# ————————————————
+opt_max_norm: 5.0 # clip_norm for main network
+fp_max_norm: 0.5 # clip_norm for fp head
+
+# ————————————————
+# Replay and tartget
+# ————————————————
+reward_scale: 0.2 # scales raw Atari rewards
+target_support: 200 # ±Vmax for Bellman targets
+is_weight_max: 5.0 # clamp IS weights to ≤5
+
+# ————————————————
+# E-greedy schedule
+# ————————————————
+eps_type: linear 
+initial_eps: 1.0
+min_exp_eps: 0.03
+eps_decay_steps: 500000 # only used by linear schedule
+decay_rate: 1e-6 # only used by exponential schedule

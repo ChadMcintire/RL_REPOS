@@ -5,6 +5,7 @@ import numpy as np
 from torch import from_numpy
 import copy
 from torch import Tensor
+from schedules.epsilon import make_epsilon_fn
 
 
 class BaseAgent:
@@ -14,6 +15,8 @@ class BaseAgent:
         self.exp_eps = 1.0
         self.memory = TorchReplayBuffer(config)
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self._eps_fn = make_epsilon_fn(config)
+        self.exp_eps = config.agent.initial_eps
 
         # build online and target models (in subclasses)
         self.online_model = None
