@@ -9,7 +9,7 @@ import wandb
 
 
 class Evaluator:
-    def __init__(self, agent, config, max_episodes=3):
+    def __init__(self, agent, config, max_episodes=8):
         self.config = config
         self.agent = agent
         self.max_episodes = max_episodes

@@ -118,7 +118,7 @@ class FQF(BaseAgent):
             fp_grads = 2 * z - z_hat - z_hat_1
 
         fp_loss = (taus[:, 1:-1] * fp_grads.squeeze(-1)).sum(-1).mean(0)
-        lmda = config.agent.lmda 
+        lmda = self.config.agent.lmda 
         fp_loss - lmda * ent
 
         self.fp_optimizer.zero_grad()
