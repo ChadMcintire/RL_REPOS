@@ -11,7 +11,7 @@ class BaseAgent:
     def __init__(self, config):
         self.config = config
         self.batch_size = config.batch_size
-        self.exp_eps = 1
+        self.exp_eps = 1.0
         self.memory = TorchReplayBuffer(config)
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 

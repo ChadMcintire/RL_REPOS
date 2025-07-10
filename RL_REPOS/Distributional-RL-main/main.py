@@ -54,7 +54,7 @@ def main(config: DictConfig):
                     break
                 state = next_state
 
-            agent.exp_eps = agent.exp_eps - 0.005 if agent.exp_eps > config.min_exp_eps + 0.005 else config.min_exp_eps
+            agent.exp_eps = agent.exp_eps - 0.005 if agent.exp_eps > config.agent.min_exp_eps + 0.005 else config.agent.min_exp_eps
 
             logger.off()
             log_data = {

@@ -1,7 +1,14 @@
 name: FQF
-lr: 5e-5
+lr: 1e-5
 fp_lr: 1.e-7
 n_embedding: 64
 kappa: 1.0
 N: 32
 lmda: 0.01
+opt_max_norm: 0.01
+fp_max_norm: 0.05
+reward_scale: 0.2
+target_support: 150
+is_weight_max: 5.0
+adam_eps: 0.0003125  # 0.01 / 32
+min_exp_eps: 0.01

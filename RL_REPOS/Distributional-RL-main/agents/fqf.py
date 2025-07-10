@@ -20,7 +20,7 @@ class FQF(BaseAgent):
         self.optimizer = torch.optim.Adam(
             self.online_model.parameters(),
             config.agent.lr,
-            eps=config.adam_eps
+            eps=config.agent.adam_eps
         )
         self.fp_optimizer = torch.optim.RMSprop(
             self.online_model.fp_layer.parameters(),
@@ -37,7 +37,7 @@ class FQF(BaseAgent):
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)  # noqa
         # ----------------------------------------------------------------------------
         # rescale rewards if needed
-        rewards = rewards * self.config.reward_scale
+        rewards = rewards * self.config.agent.reward_scale
         # ----------------------------------------------------------------------------
 
         # compute taus for quantile networks
@@ -53,7 +53,7 @@ class FQF(BaseAgent):
             target_z = rewards + self.config.gamma * (~dones) * next_z
 
             # clamp targets to a fixed support
-            V_MAX = self.config.target_support  # e.g. 200
+            V_MAX = self.config.agent.target_support  # e.g. 200
             target_z = torch.clamp(target_z, -V_MAX, V_MAX)
 
         # current quantile predictions
@@ -81,7 +81,7 @@ class FQF(BaseAgent):
             # importance-sampling weights & indices
             is_weights = torch.as_tensor(info["_weight"], device=self.device)
             # clamp them so no single sample blows up
-            is_weights = torch.clamp(is_weights, max=self.config.is_weight_max)
+            is_weights = torch.clamp(is_weights, max=self.config.agent.is_weight_max)
             #is_weights = torch.tensor(info["_weight"], device=self.device)  # [batch]
             indices    = info["index"]                                      # np.ndarray
 
@@ -100,7 +100,7 @@ class FQF(BaseAgent):
         loss.backward()
         total_norm = torch.nn.utils.clip_grad_norm_(
                 self.online_model.parameters(),
-                max_norm=self.config.max_grad_norm
+                max_norm=self.config.agent.opt_max_norm
         )
         self.optimizer.step()
 
@@ -124,7 +124,7 @@ class FQF(BaseAgent):
         self.fp_optimizer.zero_grad()
         fp_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.online_model.fp_layer.parameters(),
-                              max_norm=self.config.max_grad_norm)
+                              max_norm=self.config.agent.fp_max_norm)
         self.fp_optimizer.step()
 
         # ----------------------------------------------------------------------------
