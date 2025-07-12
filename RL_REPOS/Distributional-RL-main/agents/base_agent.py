@@ -2,9 +2,7 @@ from common.memory import TorchReplayBuffer
 import torch
 import random
 import numpy as np
-from torch import from_numpy
 import copy
-from torch import Tensor
 from schedules.epsilon import make_epsilon_fn
 
 
@@ -12,9 +10,11 @@ class BaseAgent:
     def __init__(self, config):
         self.config = config
         self.batch_size = config.batch_size
-        self.exp_eps = 1.0
         self.memory = TorchReplayBuffer(config)
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+        # initialize the ε‐scheduler state
+        self._step_count = 0
         self._eps_fn = make_epsilon_fn(config)
         self.exp_eps = config.agent.initial_eps
 
@@ -23,6 +23,11 @@ class BaseAgent:
         self.target_model = None
         self.optimizer = None
 
+    def increment_step(self) -> None:
+        """Advance one time‐step and decay epsilon."""
+        self._step_count += 1
+        self.exp_eps = self._eps_fn(self._step_count)
+
     def choose_action(self, state: np.ndarray) -> int:
         """ε-greedy action."""
         if random.random() < self.exp_eps:
@@ -30,6 +35,7 @@ class BaseAgent:
         x = torch.as_tensor(state, device=self.device, dtype=torch.uint8).unsqueeze(0)
         with torch.no_grad():
             q = self.online_model.get_qvalues(x).cpu()
+
         return int(q.argmax(-1))
       
     def set_models(self, online_model: torch.nn.Module) -> None:

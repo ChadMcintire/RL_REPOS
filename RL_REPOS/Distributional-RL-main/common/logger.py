@@ -67,16 +67,16 @@ class Logger:
         self.duration = time.time() - self.start_time
 
     def log(self, **kwargs):
-        required_keys = ["episode", "reward/episode_reward", "loss", "step", "e_len"]
+        required_keys = ["episode/episode", "reward/episode_reward", "episode/loss", "step", "episode/e_len"]
         for key in required_keys:
             if key not in kwargs:
                 raise ValueError(f"Missing required log key: '{key}'")
 
-        episode = kwargs["episode"]
+        episode = kwargs["episode/episode"]
         episode_reward = kwargs["reward/episode_reward"]
-        loss = kwargs["loss"]
+        loss = kwargs["episode/loss"]
         step = kwargs["step"]
-        e_len = kwargs["e_len"]
+        e_len = kwargs["episode/e_len"]
 
         self.max_episode_reward = max(self.max_episode_reward, episode_reward)
 
@@ -114,12 +114,12 @@ class Logger:
             )
 
         metrics = {
-            "Running episode reward": self.running_reward,
-            "Max episode reward": self.max_episode_reward,
-            "Moving last 10 episode rewards": last_10_avg,
+            "useful/Running episode reward": self.running_reward,
+            "useful/Max episode reward": self.max_episode_reward,
+            "useful/Moving last 10 episode rewards": last_10_avg,
             "Running Loss": self.running_loss,
             "Episode": episode,
-            "Episode Length": e_len,
+            "useful/Episode Length": e_len,
             "Total Steps": step
         }
 

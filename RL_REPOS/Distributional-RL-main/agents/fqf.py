@@ -3,6 +3,8 @@ from models import FQFModel, FractionProposalModel
 from common import huber_loss
 from .base_agent import BaseAgent
 from torchrl.data.replay_buffers.samplers import PrioritizedSampler
+from schedules.lr import make_lr_scheduler
+
 
 
 class FQF(BaseAgent):
@@ -20,12 +22,31 @@ class FQF(BaseAgent):
         self.optimizer = torch.optim.Adam(
             self.online_model.parameters(),
             config.agent.lr,
-            eps=config.agent.adam_eps
+            eps=config.agent.adam_eps,
         )
+
         self.fp_optimizer = torch.optim.RMSprop(
             self.online_model.fp_layer.parameters(),
-            config.agent.fp_lr
+            config.agent.fp_lr,
         )
+
+        # LR schedulaers
+        self.lr_scheduler_main = make_lr_scheduler(
+            self.optimizer,
+            config.agent.lr_scheduler_main
+        )
+
+        # (optional) step it once so logs start at initial lr
+        self.lr_scheduler_main.step()
+
+        self.lr_scheduler_fp = make_lr_scheduler(
+            self.fp_optimizer,
+            config.agent.lr_scheduler_fp
+        )
+        # (optional) step it once so logs start at initial lr
+        self.lr_scheduler_fp.step()
+
+
 
     def train(self):
         # wait until buffer is warmed up
@@ -103,6 +124,7 @@ class FQF(BaseAgent):
                 max_norm=self.config.agent.opt_max_norm
         )
         self.optimizer.step()
+        self.lr_scheduler_main.step()
 
         # fraction-proposal update (same as before)
         with torch.no_grad():
@@ -119,13 +141,17 @@ class FQF(BaseAgent):
 
         fp_loss = (taus[:, 1:-1] * fp_grads.squeeze(-1)).sum(-1).mean(0)
         lmda = self.config.agent.lmda 
-        fp_loss - lmda * ent
+        fp_loss = fp_loss - lmda * ent.mean()
+
+        # maybe a sum is better
+        #fp_loss = fp_loss - lmda * ent.sum()
 
         self.fp_optimizer.zero_grad()
         fp_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.online_model.fp_layer.parameters(),
                               max_norm=self.config.agent.fp_max_norm)
         self.fp_optimizer.step()
+        self.lr_scheduler_fp.step()
 
         # ----------------------------------------------------------------------------
         # soft‐update the target network every train() call
@@ -138,7 +164,7 @@ class FQF(BaseAgent):
         "loss/huber": hloss.mean().item(),
         "loss/fraction_proposal": fp_loss.item(),
         "entropy/taus": ent.mean().item(),
-        "epsilon": self.exp_eps,
+        "useful/epsilon": self.exp_eps,
         "td_error/mean": delta.abs().mean().item(),
         "td_error/std": delta.std().item(),
         "quantile/spread": (z_pred.max() - z_pred.min()).mean().item(),
@@ -149,15 +175,15 @@ class FQF(BaseAgent):
         "replay/size": len(self.memory),
         "reward/mean": rewards.mean().item(),
         "reward/std": rewards.std().item(),
-        "lr/fp_optimizer_lr": self.optimizer.param_groups[0]["lr"],
-        "lr/optimizer": self.fp_optimizer.param_groups[0]["lr"],
+        "lr/optimizer": self.optimizer.param_groups[0]["lr"],
+        "lr/fp_optimizer_lr": self.fp_optimizer.param_groups[0]["lr"],
         }
 
         # target‐online drift
         drift = sum((p_t - p).norm().item()
             for p_t, p in zip(self.target_model.parameters(),
                               self.online_model.parameters()))
-        metrics["target_online_drift"] = drift
+        metrics["useful/target_online_drift"] = drift
 
         fp_norm = sum(p.grad.norm().item()
               for p in self.online_model.fp_layer.parameters()

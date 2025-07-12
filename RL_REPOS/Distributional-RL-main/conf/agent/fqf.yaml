@@ -36,3 +36,19 @@ initial_eps: 1.0
 min_exp_eps: 0.03
 eps_decay_steps: 500000 # only used by linear schedule
 decay_rate: 1e-6 # only used by exponential schedule
+
+# Main 
+lr_scheduler_main:
+  type:       step        # “step” | “lambda” | “cosine”
+  step_size:  200000      # for StepLR (or T_max for cosine)
+  gamma:      0.9         # decay factor for StepLR
+  lambda_factor: 0.9999   # if you use type=lambda
+  eta_min:     0.0        # optional for cosine
+
+lr_scheduler_fp:
+  type: lambda # for the tiny fp-lr we usually do a slow exp decay
+  step_size: 100000 
+  gamma: 0.9 # for 
+  lambda_factor: 0.999995  # multiply fp_lr by this each scheduler.step()
+  eta_min: 0.0 
+

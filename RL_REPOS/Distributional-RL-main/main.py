@@ -46,7 +46,10 @@ def main(config: DictConfig):
                 next_state, reward, terminated, truncated, info = env.step(action)
                 done = terminated or truncated  
                 agent.store(state, reward, done, action, next_state)
+                agent.increment_step()
                 episode_reward += reward
+
+
                 if total_steps % config.train_interval == 0:
                     metrics = agent.train()
                     episode_loss += metrics["loss/total"]
@@ -54,15 +57,13 @@ def main(config: DictConfig):
                     break
                 state = next_state
 
-            agent.exp_eps = agent._eps_fn(total_steps)
-
             logger.off()
             log_data = {
-                        'episode': episode,
+                        'episode/episode': episode,
                         'reward/episode_reward': episode_reward,
-                        'loss': episode_loss / step * config.train_interval,
+                        'episode/loss': episode_loss / step * config.train_interval,
                         'step': total_steps,
-                        'e_len': step,
+                        'episode/e_len': step,
                         }
             combined_log_data = log_data | metrics 
             logger.log(**combined_log_data)
