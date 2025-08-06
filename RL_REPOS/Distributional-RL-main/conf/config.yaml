@@ -21,3 +21,4 @@ init_mem_size_to_train: 50000
 max_episodes: 10000
 batch_size: 32
 soft_tau: 0.001 #.001 seems to not give 0 in the taus as much
+max_total_steps: 17 # updated in the program, number doesn't matter except debugging

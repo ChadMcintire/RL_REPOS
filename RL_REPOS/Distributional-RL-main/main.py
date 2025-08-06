@@ -10,6 +10,8 @@ from omegaconf import DictConfig, OmegaConf
 
 @hydra.main(config_path="conf", config_name="config", version_base="1.3")
 def main(config: DictConfig):
+    env = make_atari(config.env.env_name, config.seed)
+    config.max_total_steps = config.max_episodes * env.spec.max_episode_steps
     set_random_seeds(config.seed)
 
     if os.path.exists("api_key.wandb"):
@@ -30,8 +32,8 @@ def main(config: DictConfig):
     
     agent = get_agent(config)
  
-    env = make_atari(config.env.env_name, config.seed)
     logger = Logger(agent, config)
+
 
     if not config.do_test:
         total_steps = 0

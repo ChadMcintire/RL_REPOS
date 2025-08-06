@@ -33,7 +33,8 @@ class FQF(BaseAgent):
         # LR schedulaers
         self.lr_scheduler_main = make_lr_scheduler(
             self.optimizer,
-            config.agent.lr_scheduler_main
+            config.agent.lr_scheduler_main,
+            config,
         )
 
         # (optional) step it once so logs start at initial lr
@@ -41,7 +42,8 @@ class FQF(BaseAgent):
 
         self.lr_scheduler_fp = make_lr_scheduler(
             self.fp_optimizer,
-            config.agent.lr_scheduler_fp
+            config.agent.lr_scheduler_fp,
+            config,
         )
         # (optional) step it once so logs start at initial lr
         self.lr_scheduler_fp.step()

@@ -3,6 +3,7 @@ import torch
 import random
 import numpy as np
 import copy
+from torch import Tensor
 from schedules.epsilon import make_epsilon_fn
 
 
